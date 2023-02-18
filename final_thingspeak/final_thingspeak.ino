@@ -14,9 +14,15 @@ String myAPI = "WK6HT6APPUC8ZVAS";   // API Key
 String myHOST = "api.thingspeak.com";
 String myPORT = "80";
 String myFIELD = "field1"; 
+String myFIELD2 = "field2";
+String myFIELD3 = "field3";
+String myFIELD4 = "field4";
+String myFIELD5 = "field5";
 int sendVal;
-
-
+int sendVal2;
+int sendVal3;
+int sendVal4;
+int sendVal5;
 
 const int analog_gas = A1;
 const int sensorvalue2 = 10; //address
@@ -68,10 +74,10 @@ pinMode(vibration_analog , INPUT);
  digitalWrite(green , HIGH);
  digitalWrite(red , LOW);
  digitalWrite(buzzer ,LOW);
-
-
+  float humidity = dht.readHumidity();
+  
 float tempc = dht.readTemperature();
-if(isnan(tempc))
+if(isnan(tempc) ||isnan(humidity))
         Serial.print("failed to read DHT 22\n");
 
         
@@ -80,18 +86,22 @@ else
   
     Serial.print("Temperature: ");
     Serial.print(tempc);
-    Serial.print("°C ~ ");
+    Serial.print("°C ~ \n");
+    Serial.print("humdity:");
+    Serial.print(humidity);
+    Serial.print("%");    
 }
 if (tempc >= 33)
 {
 Serial.print("Temprature Level Rising to: ");
 Serial.print(tempc);
-Serial.print("°C");
+Serial.print("°C\n");
 }
 vibration_state = digitalRead(sensorvalue2);
 int analog_value = analogRead(vibration_analog);
 Serial.print("analoge  value for vibration:");
 Serial.print(analog_value);
+Serial.print("\n");
 if (vibration_state == 1)
 {
  digitalWrite(red , HIGH);
@@ -136,10 +146,26 @@ if(watersensor >=400)
     
     
     sendVal = tempc; 
+    sendVal2 = humidity;
+    sendVal3 = analog_value; //analog vibration value
+    sendVal4 = watersensor; //water conductivity
+    sendVal5 = ppm;// gas rate in ppm
     String sendData = "GET /update?api_key="+ myAPI +"&"+ myFIELD +"="+String(sendVal);
+    String sendData2 = "GET /update?api_key="+ myAPI +"&"+ myFIELD2 +"="+String(sendVal2);
+    String sendData3 = "GET /update?api_key="+ myAPI +"&"+ myFIELD3 +"="+String(sendVal3);  
+    String sendData4 = "GET /update?api_key="+ myAPI +"&"+ myFIELD4 +"="+String(sendVal4);   
+    String sendData5 = "GET /update?api_key="+ myAPI +"&"+ myFIELD5 +"="+String(sendVal5);           
     espData("AT+CIPMUX=1", 1000, DEBUG);       //Allow multiple connections
     espData("AT+CIPSTART=0,\"TCP\",\""+ myHOST +"\","+ myPORT, 1000, DEBUG);
-    espData("AT+CIPSEND=0," +String(sendData.length()+4),1000,DEBUG);  
+    
+        espData("AT+CIPSEND=0," +String(sendData.length()+4),1000,DEBUG);  
+        espData("AT+CIPSEND=0," +String(sendData2.length()+4),1000,DEBUG); 
+        espData("AT+CIPSEND=0," +String(sendData3.length()+4),1000,DEBUG); 
+        espData("AT+CIPSEND=0," +String(sendData4.length()+4),1000,DEBUG);
+        espData("AT+CIPSEND=0," +String(sendData5.length()+4),1000,DEBUG);  
+        
+        
+  
       if (sendVal > 40)
     {
       Serial.println("high temprature");
