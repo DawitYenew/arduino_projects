@@ -145,11 +145,11 @@ if(watersensor >=400)
 
     
     
-    sendVal = tempc; 
+    sendVal = tempc; //Temperature in celcius
     sendVal2 = humidity;
     sendVal3 = vibration_analog; //analog vibration value
     sendVal4 = watersensor; //water conductivity
-    sendVal5 = ppm;// gas rate in ppm
+    sendVal5 = ppm;// Co2 gas rate in ppm
     String sendData = "GET /update?api_key="+ myAPI +"&"+ myFIELD +"="+String(sendVal);
     String sendData2 = "GET /update?api_key="+ myAPI +"&"+ myFIELD2 +"="+String(sendVal2);
     String sendData3 = "GET /update?api_key="+ myAPI +"&"+ myFIELD3 +"="+String(sendVal3);  
