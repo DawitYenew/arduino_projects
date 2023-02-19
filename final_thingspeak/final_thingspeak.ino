@@ -2,28 +2,21 @@
 
 #include <SoftwareSerial.h>
 #include<DHT.h>       //Software Serial library
-SoftwareSerial espSerial(10, 11);   //Pin 2 and 3 act as RX and TX. Connect them to TX and RX of ESP8266      
+SoftwareSerial espSerial(13, 12);   //Pin 2 and 3 act as RX and TX. Connect them to TX and RX of ESP8266      
 #define DEBUG true
 #define red  7
 #define green 6
 #define buzzer 5
 #define DHTTYPE DHT22
 String mySSID = "Codak";       // WiFi SSID
-String myPWD = "lemlem064"; // WiFi Password
-String myAPI = "WK6HT6APPUC8ZVAS";   // API Key
+String myPWD = "lemlem0646"; // WiFi Password
+String myAPI = "FZQHE2NYUZZBJ5CO";   // API Key
 String myHOST = "api.thingspeak.com";
 String myPORT = "80";
-String myFIELD = "field1"; 
-String myFIELD2 = "field2";
-String myFIELD3 = "field3";
-String myFIELD4 = "field4";
-String myFIELD5 = "field5";
-int sendVal;
-int sendVal2;
-int sendVal3;
-int sendVal4;
-int sendVal5;
 
+
+int countTrueCommand;
+int countTimeCommand; 
 const int analog_gas = A1;
 const int sensorvalue2 = 10; //address
 const int tempsensor = 2;//address
@@ -32,6 +25,7 @@ int vibration_state = 0;//value
 const int vibration_analog  = A2;
 MQ135 gas_state = MQ135(analog_gas);
 const int analogPin = A0;//address
+boolean found = false; 
 
 DHT dht(tempsensor , DHTTYPE);
 
@@ -49,16 +43,17 @@ void setup()
 {
   Serial.begin(9600);
   espSerial.begin(115200);
-  pinMode(sensorvalue2 , INPUT);
-    dht.begin(); //initiating the sensor
   
-  espData("AT+RST", 1000, DEBUG);                      //Reset the ESP8266 module
-  espData("AT+CWMODE=1", 1000, DEBUG);                 //Set the ESP mode as station mode
-  espData("AT+CWJAP=\""+ mySSID +"\",\""+ myPWD +"\"", 1000, DEBUG);   //Connect to WiFi network
-  /*while(!esp.find("OK")) 
-  {          
-      //Wait for connection
-  }*/
+  // pinMode(sensorvalue2 , INPUT);
+  dht.begin(); //initiating the sensor
+  sendCommand("AT",5,"OK");
+  sendCommand("AT+CWMODE=1",5,"OK");
+  sendCommand("AT+CWJAP=\""+ mySSID +"\",\""+ myPWD +"\"",20,"OK");
+  
+  // {          
+  //     //Wait for connection
+  // }*/
+pinMode(tempsensor , INPUT);
 pinMode(red , OUTPUT);
 pinMode(green , OUTPUT);
 pinMode(buzzer , OUTPUT);  
@@ -69,93 +64,27 @@ pinMode(vibration_analog , INPUT);
 
   void loop()
   {
-  
-
  digitalWrite(green , HIGH);
  digitalWrite(red , LOW);
  digitalWrite(buzzer ,LOW);
-  float humidity = dht.readHumidity();
+
+
+ 
   
-float tempc = dht.readTemperature();
-if(isnan(tempc) ||isnan(humidity))
-        Serial.print("failed to read DHT 22\n");
-
-        
-else
-{
   
-    Serial.print("Temperature: ");
-    Serial.print(tempc);
-    Serial.print("°C ~ \n");
-    Serial.print("humdity:");
-    Serial.print(humidity);
-    Serial.print("%");    
-}
-if (tempc >= 33)
-{
-Serial.print("Temprature Level Rising to: ");
-Serial.print(tempc);
-Serial.print("°C\n");
-}
-vibration_state = digitalRead(sensorvalue2);
-int analog_value = analogRead(vibration_analog);
-Serial.print("analoge  value for vibration:");
-Serial.print(analog_value);
-Serial.print("\n");
-if (vibration_state == 1)
-{
- digitalWrite(red , HIGH);
- digitalWrite(green , LOW);
- Serial.print("sensing some Vibration\n");
-delay(1000);
 
-}
-else
-{
-digitalWrite(red , LOW);
-digitalWrite(green ,HIGH);
-Serial.print("No Vibration\n");
 
-}
-watersensor = analogRead(analogPin);
-Serial.print(watersensor);
-Serial.print("\n");
-int flag1 = 0;
-if(watersensor >=400)
-{
-  flag1 =1;
-    digitalWrite(red,HIGH);
-    digitalWrite(green , LOW);
-    delay(100);
-
-}
- float ppm = gas_state.getPPM();
-  if(ppm > 800)
-  {
-   Serial.print("Detecting high level of Smoke in the Room\n");
-   digitalWrite(red , HIGH);
-   digitalWrite(green , LOW);
-   digitalWrite(buzzer , HIGH);
+//code to be augmented
+ String getData = "GET /update?api_key="  + myAPI +  "&field1=" +get_temperature()+  "&field2=" +get_humidity()+  "&field3="   +get_vibration()+  "&field4=" +get_ppm() +"&field5= "  +get_water_c();
+ sendCommand("AT+CIPMUX=1",5,"OK");
+ sendCommand("AT+CIPSTART=0,\"TCP\",\""+ myHOST +"\","+ myPORT,15,"OK");
+ sendCommand("AT+CIPSEND=0," +String(getData),4,">");
+ espSerial.println(getData.length()+4);delay(1500);countTrueCommand++;
+ sendCommand("AT+CIPCLOSE=0",5,"OK");
     
   }
-
-
-
-
-
-    
-    
-    sendVal = tempc; //Temperature in celcius
-    sendVal2 = humidity;
-    sendVal3 = vibration_analog; //analog vibration value
-    sendVal4 = watersensor; //water conductivity
-    sendVal5 = ppm;// Co2 gas rate in ppm
-    String sendData = "GET /update?api_key="+ myAPI +"&"+ myFIELD +"="+String(sendVal);
-    String sendData2 = "GET /update?api_key="+ myAPI +"&"+ myFIELD2 +"="+String(sendVal2);
-    String sendData3 = "GET /update?api_key="+ myAPI +"&"+ myFIELD3 +"="+String(sendVal3);  
-    String sendData4 = "GET /update?api_key="+ myAPI +"&"+ myFIELD4 +"="+String(sendVal4);   
-    String sendData5 = "GET /update?api_key="+ myAPI +"&"+ myFIELD5 +"="+String(sendVal5);           
-    espData("AT+CIPMUX=1", 1000, DEBUG);       //Allow multiple connections
+         
+    /*espData("AT+CIPMUX=1", 1000, DEBUG);       //Allow multiple connections
     espData("AT+CIPSTART=0,\"TCP\",\""+ myHOST +"\","+ myPORT, 1000, DEBUG);
     
         espData("AT+CIPSEND=0," +String(sendData.length()+4),1000,DEBUG);  
@@ -177,28 +106,136 @@ if(watersensor >=400)
      
     espData("AT+CIPCLOSE=0",1000,DEBUG);
     delay(10000);
-  }
-
-  String espData(String command, const int timeout, boolean debug)
-{
-  Serial.print("AT Command ==> ");
-  Serial.print(command);
-  Serial.println("     ");
-  
-  String response = "";
-  espSerial.println(command);
-  long int time = millis();
-  while ( (time + timeout) > millis())
-  {
-    while (espSerial.available())
-    {
-      char c = espSerial.read();
-      response += c;
-    }
-  }
-  if (debug)
-  {
-    // Serial.print(response);
-  }
-  return response;
 }
+*/
+
+
+//functions that return value from sensors
+ String get_temperature()
+ {
+   float tempc = dht.readTemperature();
+if(isnan(tempc))
+      Serial.print("failed to read DHT 22\n");     
+     else
+     {
+    Serial.print("Temperature: ");
+    Serial.print(tempc);
+    Serial.print("°C ~ \n");
+      
+      }
+     if (tempc >= 33)
+     {
+      Serial.print("Temprature Level Rising to: ");
+       Serial.print(tempc);
+        Serial.print("°C\n");
+
+     }
+     
+      String ret = String(tempc);
+      
+     return ret;
+     }
+     
+
+ String get_humidity()
+ {
+    float humidity = dht.readHumidity();
+     Serial.print("humdity:");
+    Serial.print(humidity);
+    Serial.print("%"); 
+    Serial.print("\n");
+    String ret = String(humidity);
+      return ret;
+ }
+ String get_vibration()
+ {
+    vibration_state = digitalRead(sensorvalue2);
+      int analog_value = analogRead(vibration_analog);
+           Serial.print("analoge  value for vibration:");
+             Serial.print(analog_value);
+               Serial.print("\n");
+     if (vibration_state == 1)
+        {
+           digitalWrite(red , HIGH);
+                digitalWrite(green , LOW);
+                    Serial.print("sensing some Vibration\n");
+                      delay(1000);
+
+                         }
+                     else
+                        { 
+                         digitalWrite(red , LOW);
+                          digitalWrite(green ,HIGH);
+                           Serial.print("No Vibration\n");
+
+                            }
+
+                          String ret = String(analog_value);                                                    
+                      return "20";
+  }
+ String get_ppm()
+  {
+   float ppm = gas_state.getPPM();
+  if(ppm > 800)
+  {
+   Serial.print("Detecting high level of Smoke in the Room\n");
+   digitalWrite(red , HIGH);
+   digitalWrite(green , LOW);
+   digitalWrite(buzzer , HIGH);
+    
+  }
+    String ret = String(ppm);  
+        return "30";  
+  }
+   String get_water_c()
+   {
+             watersensor = analogRead(analogPin);
+              Serial.print("Water Conductivity:") ;         
+             Serial.print(watersensor);
+              Serial.print("\n");
+               int flag1 = 0;
+                   if(watersensor >=400)
+                  {
+                    flag1 =1;
+                       digitalWrite(red,HIGH);
+                          digitalWrite(green , LOW);
+                           delay(100);
+
+                                }
+                                String ret = String(watersensor);
+      return "20";
+     }
+
+void sendCommand(String command, int maxTime, char readReplay[]) {
+  Serial.print(countTrueCommand);
+  Serial.print(". at command => ");
+  Serial.print(command);
+  Serial.print(" ");
+  while(countTimeCommand < (maxTime*1))
+  {
+    espSerial.println(command);//at+cipsend
+    if(espSerial.find(readReplay))//ok
+    {
+      found = true;
+      break;
+    }
+  
+    countTimeCommand++;
+  }
+  
+  if(found == true)
+  {
+    Serial.println("OYI");
+    countTrueCommand++;
+    countTimeCommand = 0;
+  }
+  
+  if(found == false)
+  {
+    Serial.println("Fail");
+    countTrueCommand = 0;
+    countTimeCommand = 0;
+  }
+  
+  found = false;
+ }
